@@ -93,9 +93,6 @@ $('#registerForm').onsubmit = async e=>{
     toast('Welcome to Splash! 💧'); enterApp();
   }catch(err){ $('#authError').textContent = err.message; }
 };
-$('#demoBtn').onclick = async ()=>{
-  try{ await doLogin('amara','demo123'); }catch(err){ $('#authError').textContent = err.message; }
-};
 $('#logoutBtn').onclick = async ()=>{
   try{ await api('/api/auth/logout',{method:'POST'}); }catch{}
   token=null; me=null; localStorage.removeItem('splash_token');

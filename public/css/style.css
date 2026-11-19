@@ -24,8 +24,6 @@ input:focus,textarea:focus{border-color:var(--accent)}
 .auth-form{display:flex;flex-direction:column;gap:10px}
 .btn-primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;font-weight:700;padding:11px 20px;border-radius:12px;transition:.2s}
 .btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(6,182,212,.4)}
-.btn-demo{margin-top:14px;color:var(--accent);font-weight:600;padding:8px;width:100%;border:1px dashed var(--border);border-radius:12px}
-.btn-demo:hover{border-color:var(--accent)}
 .error{color:#f87171;min-height:20px;margin-top:10px;font-size:14px}
 .auth-foot{color:var(--muted);font-size:12px;margin-top:14px}
 .picker-row{display:flex;align-items:center;gap:10px;text-align:left}

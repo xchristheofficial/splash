@@ -19,39 +19,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ---------- DB ----------
 function seed() {
-  const now = Date.now();
-  const h = 3600e3;
-  return {
-    users: [
-      { id: 'u1', username: 'splash', displayName: 'Splash Official', passwordHash: hashPw('demo123'), avatar: '💧', color: '#06b6d4', bio: 'The official Splash account. Welcome to the wave! 🌊', createdAt: now - 30 * 24 * h, lastSeen: now },
-      { id: 'u2', username: 'amara', displayName: 'Emily Parker', passwordHash: hashPw('demo123'), avatar: '🌺', color: '#f472b6', bio: 'Photographer 📸 | Chasing golden hour', createdAt: now - 20 * 24 * h, lastSeen: now },
-      { id: 'u3', username: 'kofi', displayName: 'James Miller', passwordHash: hashPw('demo123'), avatar: '🎧', color: '#a78bfa', bio: 'Music producer 🎵 Beats daily', createdAt: now - 15 * 24 * h, lastSeen: now },
-      { id: 'u4', username: 'zuri', displayName: 'Olivia Bennett', passwordHash: hashPw('demo123'), avatar: '✨', color: '#fbbf24', bio: 'Book lover 📚 | Coffee first ☕', createdAt: now - 10 * 24 * h, lastSeen: now },
-      { id: 'u5', username: 'dante', displayName: 'Daniel Cooper', passwordHash: hashPw('demo123'), avatar: '⚽', color: '#34d399', bio: 'Football ⚽ | Gamer 🎮 | Vibes only', createdAt: now - 5 * 24 * h, lastSeen: now },
-    ],
-    posts: [
-      { id: 'p1', userId: 'u1', text: 'Welcome to Splash! 💧 Post your thoughts, chat with friends in real time, and make waves. Who is excited? 🎉', mood: '🎉', likes: ['u2', 'u3', 'u4'], comments: [{ id: 'c1', userId: 'u2', text: 'Love this! The new wave is here 🌊', createdAt: now - 5 * h }, { id: 'c2', userId: 'u3', text: 'Let\'s gooo 🔥', createdAt: now - 4 * h }], createdAt: now - 6 * h },
-      { id: 'p2', userId: 'u2', text: 'Golden hour never disappoints 🌅📸 Shot this on my walk today. What do you think?', mood: '🌅', likes: ['u1', 'u3', 'u5'], comments: [{ id: 'c3', userId: 'u4', text: 'Stunning! Teach me your ways 😍', createdAt: now - 2 * h }], createdAt: now - 3 * h },
-      { id: 'p3', userId: 'u3', text: 'Just dropped a new beat tape 🎧🔥 12 tracks, all vibes. Link in bio — tell me your favourite track!', mood: '🎧', likes: ['u2', 'u4'], comments: [], createdAt: now - 2 * h },
-      { id: 'p4', userId: 'u4', text: 'Finished "Atomic Habits" today 📚✨ Small habits, remarkable results. What should I read next?', mood: '📚', likes: ['u1', 'u2', 'u3', 'u5'], comments: [{ id: 'c4', userId: 'u5', text: 'Try "Deep Work" — life changing 💪', createdAt: now - 1 * h }], createdAt: now - 90 * 60e3 },
-      { id: 'p5', userId: 'u5', text: 'Match day energy ⚽🔥 Who are you backing today? Drop your predictions below 👇', mood: '⚽', likes: ['u3'], comments: [], createdAt: now - 30 * 60e3 },
-    ],
-    messages: [
-      { id: 'm1', room: 'global', userId: 'u1', text: 'Hey everyone! 👋 Welcome to the global chat. Say hi!', createdAt: now - 5 * h },
-      { id: 'm2', room: 'global', userId: 'u2', text: 'Hi Splash! Love the new app 💙', createdAt: now - 4.5 * h },
-      { id: 'm3', room: 'global', userId: 'u3', text: 'Yo yo! 🎧', createdAt: now - 4 * h },
-      { id: 'm4', room: 'global', userId: 'u4', text: 'This chat is so smooth ✨', createdAt: now - 3 * h },
-      { id: 'm5', room: 'global', userId: 'u5', text: 'Anyone watching the match later? ⚽', createdAt: now - 1 * h },
-      { id: 'm6', room: 'global', userId: 'u2', text: 'Me! Can\'t wait 🔥', createdAt: now - 50 * 60e3 },
-    ],
-    notifications: [],
-    follows: [
-      { followerId: 'u2', followingId: 'u1' }, { followerId: 'u3', followingId: 'u1' },
-      { followerId: 'u4', followingId: 'u1' }, { followerId: 'u5', followingId: 'u1' },
-      { followerId: 'u2', followingId: 'u3' }, { followerId: 'u3', followingId: 'u2' },
-    ],
-    tokens: {},
-  };
+  return { users: [], posts: [], messages: [], notifications: [], follows: [], tokens: {} };
 }
 
 function hashPw(pw) {
@@ -70,16 +38,31 @@ function uid(p) { return p + crypto.randomBytes(6).toString('hex'); }
 
 let db;
 if (fs.existsSync(DB_PATH)) {
-  try { db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8')); } catch { db = seed(); fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2)); }
+  // Never overwrite an unreadable database with an empty one.
+  db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
 } else {
   db = seed();
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
 }
-// Update only the original demo profiles; do not overwrite edited user profiles.
-for (const [id, oldName, newName] of [['u2','Amara Otieno','Emily Parker'], ['u3','Kofi Mensah','James Miller'], ['u4','Zuri Wanjiru','Olivia Bennett'], ['u5','Dante Kimani','Daniel Cooper']]) {
-  const u = db.users.find(user => user.id === id && user.displayName === oldName);
-  if (u) u.displayName = newName;
+// Remove only the original seeded accounts, identified by their fixed ID and username.
+// Registered accounts receive random IDs, so even a matching username is preserved.
+const demoIds = new Map([['u1', 'splash'], ['u2', 'amara'], ['u3', 'kofi'], ['u4', 'zuri'], ['u5', 'dante']]);
+const removed = new Set(db.users.filter(u => demoIds.get(u.id) === u.username).map(u => u.id));
+if (removed.size) {
+  const removedPosts = new Set(db.posts.filter(p => removed.has(p.userId)).map(p => p.id));
+  db.users = db.users.filter(u => !removed.has(u.id));
+  db.posts = db.posts.filter(p => !removed.has(p.userId));
+  for (const post of db.posts) {
+    post.likes = post.likes.filter(id => !removed.has(id));
+    post.comments = post.comments.filter(c => !removed.has(c.userId));
+  }
+  const removedRooms = new Set(db.messages.filter(m => m.room.startsWith('dm:') && m.room.slice(3).split(':').some(id => removed.has(id))).map(m => m.room));
+  db.messages = db.messages.filter(m => !removed.has(m.userId) && !removedRooms.has(m.room));
+  db.follows = db.follows.filter(f => !removed.has(f.followerId) && !removed.has(f.followingId));
+  db.notifications = db.notifications.filter(n => !removed.has(n.userId) && !removed.has(n.refId) && !removedPosts.has(n.refId) && !removedRooms.has(n.refId));
+  for (const [token, id] of Object.entries(db.tokens)) if (removed.has(id)) delete db.tokens[token];
+  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
 }
 let saveTimer;
 function save() {
