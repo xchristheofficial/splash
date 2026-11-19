@@ -1,0 +1,25 @@
+{
+  "name": "splash",
+  "version": "1.0.0",
+  "description": "Splash is a social app for chatting with friends in real time.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xchristheofficial/splash.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/xchristheofficial/splash/issues"
+  },
+  "homepage": "https://github.com/xchristheofficial/splash#readme",
+  "dependencies": {
+    "express": "^5.3.0",
+    "socket.io": "^4.8.4"
+  }
+}
