@@ -177,3 +177,10 @@ input:focus,textarea:focus{border-color:var(--accent)}
   .topbar-search{display:none}
   .me-chip span:last-child{display:none}
 }
+.splash-logo { object-fit: contain; display: inline-block; }
+.logo-big.splash-logo { width: 72px; height: 72px; }
+.logo-sm.splash-logo { width: 34px; height: 34px; vertical-align: middle; }
+.google-signin { margin: 16px auto 0; text-align: center; }
+.auth-divider { color: #94a3b8; margin-bottom: 12px; font-size: 13px; }
+#googleButton { display: flex; justify-content: center; }
+.nav-icon { width: 22px; height: 22px; flex: 0 0 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }

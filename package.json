@@ -20,6 +20,7 @@
   "homepage": "https://github.com/xchristheofficial/splash#readme",
   "dependencies": {
     "express": "^5.3.0",
+    "google-auth-library": "^11.3.4",
     "socket.io": "^4.8.4"
   }
 }

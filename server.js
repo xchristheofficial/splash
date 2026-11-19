@@ -4,13 +4,15 @@ const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client();
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
 const PORT = process.env.PORT || 3000;
-const DB_PATH = path.join(__dirname, 'data', 'db.json');
+const DB_PATH = path.join(process.env.DATA_DIR || path.join(__dirname, 'data'), 'db.json');
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -22,14 +24,14 @@ function seed() {
   return {
     users: [
       { id: 'u1', username: 'splash', displayName: 'Splash Official', passwordHash: hashPw('demo123'), avatar: '💧', color: '#06b6d4', bio: 'The official Splash account. Welcome to the wave! 🌊', createdAt: now - 30 * 24 * h, lastSeen: now },
-      { id: 'u2', username: 'amara', displayName: 'Amara Otieno', passwordHash: hashPw('demo123'), avatar: '🌺', color: '#f472b6', bio: 'Photographer 📸 | Nairobi 🇰🇪 | Chasing golden hour', createdAt: now - 20 * 24 * h, lastSeen: now },
-      { id: 'u3', username: 'kofi', displayName: 'Kofi Mensah', passwordHash: hashPw('demo123'), avatar: '🎧', color: '#a78bfa', bio: 'Music producer 🎵 Beats daily', createdAt: now - 15 * 24 * h, lastSeen: now },
-      { id: 'u4', username: 'zuri', displayName: 'Zuri Wanjiru', passwordHash: hashPw('demo123'), avatar: '✨', color: '#fbbf24', bio: 'Book lover 📚 | Coffee first ☕', createdAt: now - 10 * 24 * h, lastSeen: now },
-      { id: 'u5', username: 'dante', displayName: 'Dante Kimani', passwordHash: hashPw('demo123'), avatar: '⚽', color: '#34d399', bio: 'Football ⚽ | Gamer 🎮 | Vibes only', createdAt: now - 5 * 24 * h, lastSeen: now },
+      { id: 'u2', username: 'amara', displayName: 'Emily Parker', passwordHash: hashPw('demo123'), avatar: '🌺', color: '#f472b6', bio: 'Photographer 📸 | Chasing golden hour', createdAt: now - 20 * 24 * h, lastSeen: now },
+      { id: 'u3', username: 'kofi', displayName: 'James Miller', passwordHash: hashPw('demo123'), avatar: '🎧', color: '#a78bfa', bio: 'Music producer 🎵 Beats daily', createdAt: now - 15 * 24 * h, lastSeen: now },
+      { id: 'u4', username: 'zuri', displayName: 'Olivia Bennett', passwordHash: hashPw('demo123'), avatar: '✨', color: '#fbbf24', bio: 'Book lover 📚 | Coffee first ☕', createdAt: now - 10 * 24 * h, lastSeen: now },
+      { id: 'u5', username: 'dante', displayName: 'Daniel Cooper', passwordHash: hashPw('demo123'), avatar: '⚽', color: '#34d399', bio: 'Football ⚽ | Gamer 🎮 | Vibes only', createdAt: now - 5 * 24 * h, lastSeen: now },
     ],
     posts: [
       { id: 'p1', userId: 'u1', text: 'Welcome to Splash! 💧 Post your thoughts, chat with friends in real time, and make waves. Who is excited? 🎉', mood: '🎉', likes: ['u2', 'u3', 'u4'], comments: [{ id: 'c1', userId: 'u2', text: 'Love this! The new wave is here 🌊', createdAt: now - 5 * h }, { id: 'c2', userId: 'u3', text: 'Let\'s gooo 🔥', createdAt: now - 4 * h }], createdAt: now - 6 * h },
-      { id: 'p2', userId: 'u2', text: 'Golden hour in Nairobi never disappoints 🌅📸 Shot this on my walk today. What do you think?', mood: '🌅', likes: ['u1', 'u3', 'u5'], comments: [{ id: 'c3', userId: 'u4', text: 'Stunning! Teach me your ways 😍', createdAt: now - 2 * h }], createdAt: now - 3 * h },
+      { id: 'p2', userId: 'u2', text: 'Golden hour never disappoints 🌅📸 Shot this on my walk today. What do you think?', mood: '🌅', likes: ['u1', 'u3', 'u5'], comments: [{ id: 'c3', userId: 'u4', text: 'Stunning! Teach me your ways 😍', createdAt: now - 2 * h }], createdAt: now - 3 * h },
       { id: 'p3', userId: 'u3', text: 'Just dropped a new beat tape 🎧🔥 12 tracks, all vibes. Link in bio — tell me your favourite track!', mood: '🎧', likes: ['u2', 'u4'], comments: [], createdAt: now - 2 * h },
       { id: 'p4', userId: 'u4', text: 'Finished "Atomic Habits" today 📚✨ Small habits, remarkable results. What should I read next?', mood: '📚', likes: ['u1', 'u2', 'u3', 'u5'], comments: [{ id: 'c4', userId: 'u5', text: 'Try "Deep Work" — life changing 💪', createdAt: now - 1 * h }], createdAt: now - 90 * 60e3 },
       { id: 'p5', userId: 'u5', text: 'Match day energy ⚽🔥 Who are you backing today? Drop your predictions below 👇', mood: '⚽', likes: ['u3'], comments: [], createdAt: now - 30 * 60e3 },
@@ -74,6 +76,11 @@ if (fs.existsSync(DB_PATH)) {
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
 }
+// Update only the original demo profiles; do not overwrite edited user profiles.
+for (const [id, oldName, newName] of [['u2','Amara Otieno','Emily Parker'], ['u3','Kofi Mensah','James Miller'], ['u4','Zuri Wanjiru','Olivia Bennett'], ['u5','Dante Kimani','Daniel Cooper']]) {
+  const u = db.users.find(user => user.id === id && user.displayName === oldName);
+  if (u) u.displayName = newName;
+}
 let saveTimer;
 function save() {
   clearTimeout(saveTimer);
@@ -108,12 +115,15 @@ function enrichMsg(m) { return { ...m, author: publicUser(userById(m.userId)) };
 // ---------- Auth ----------
 app.post('/api/auth/register', (req, res) => {
   const { username, password, displayName, avatar, color } = req.body || {};
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Please enter a valid email address' });
+  if (db.users.some(u => u.email === email)) return res.status(400).json({ error: 'Email already in use' });
   if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
   const uname = String(username).trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
   if (uname.length < 3) return res.status(400).json({ error: 'Username must be at least 3 characters (letters, numbers, _)' });
-  if (String(password).length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
+  if (String(password).length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
   if (userByName(uname)) return res.status(400).json({ error: 'Username already taken' });
-  const u = { id: uid('u'), username: uname, displayName: String(displayName || uname).slice(0, 40), passwordHash: hashPw(String(password)), avatar: String(avatar || '😎').slice(0, 4), color: String(color || '#06b6d4'), bio: '', createdAt: Date.now(), lastSeen: Date.now() };
+  const u = { id: uid('u'), username: uname, email, displayName: String(displayName || uname).slice(0, 40), passwordHash: hashPw(String(password)), avatar: String(avatar || '😎').slice(0, 4), color: String(color || '#06b6d4'), bio: '', createdAt: Date.now(), lastSeen: Date.now() };
   db.users.push(u);
   const token = crypto.randomBytes(24).toString('hex');
   db.tokens[token] = u.id; save();
@@ -121,11 +131,36 @@ app.post('/api/auth/register', (req, res) => {
 });
 app.post('/api/auth/login', (req, res) => {
   const { username, password } = req.body || {};
-  const u = userByName(username || '');
-  if (!u || !verifyPw(String(password || ''), u.passwordHash)) return res.status(401).json({ error: 'Invalid username or password' });
+  const identifier = String(username || req.body?.email || '').trim().toLowerCase();
+  const u = db.users.find(user => user.email === identifier) || userByName(identifier);
+  if (!u || !verifyPw(String(password || ''), u.passwordHash)) return res.status(401).json({ error: 'Invalid email, username or password' });
   const token = crypto.randomBytes(24).toString('hex');
   db.tokens[token] = u.id; u.lastSeen = Date.now(); save();
   res.json({ token, user: publicUser(u) });
+});
+// Google Identity Services sends a signed ID token; verify it before using any claims.
+app.get('/api/auth/config', (req, res) => res.json({ googleClientId: process.env.GOOGLE_CLIENT_ID || null }));
+app.post('/api/auth/google', async (req, res) => {
+  if (!process.env.GOOGLE_CLIENT_ID) return res.status(503).json({ error: 'Google sign-in is not configured' });
+  try {
+    const ticket = await googleClient.verifyIdToken({ idToken: req.body?.credential, audience: process.env.GOOGLE_CLIENT_ID });
+    const claims = ticket.getPayload();
+    if (!claims.email_verified || !claims.email || !claims.sub) return res.status(401).json({ error: 'Google email must be verified' });
+    const email = claims.email.toLowerCase();
+    let u = db.users.find(user => user.googleId === claims.sub);
+    // Do not automatically link an existing password account: its email has not been verified by Splash.
+    if (!u && db.users.some(user => user.email === email)) return res.status(409).json({ error: 'This email is already registered. Please log in with your password.' });
+    if (!u) {
+      const base = (email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 18) || 'user');
+      let username = base;
+      while (userByName(username)) username = base + crypto.randomBytes(3).toString('hex');
+      u = { id: uid('u'), username, email, googleId: claims.sub, displayName: String(claims.name || username).slice(0, 40), avatar: '😎', color: '#06b6d4', bio: '', createdAt: Date.now(), lastSeen: Date.now() };
+      db.users.push(u);
+    }
+    const token = crypto.randomBytes(24).toString('hex');
+    db.tokens[token] = u.id; u.lastSeen = Date.now(); save();
+    res.json({ token, user: publicUser(u) });
+  } catch { res.status(401).json({ error: 'Google sign-in failed. Please try again.' }); }
 });
 app.post('/api/auth/logout', auth, (req, res) => { delete db.tokens[req.token]; save(); res.json({ ok: true }); });
 app.get('/api/me', auth, (req, res) => res.json(publicUser(req.user)));

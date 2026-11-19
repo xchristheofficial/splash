@@ -40,6 +40,26 @@ function setAuthMode(login){
   $('#registerForm').classList.toggle('hidden', login);
   $('#authError').textContent='';
 }
+async function setupGoogleSignIn(){
+  try {
+    const config = await api('/api/auth/config');
+    if (!config.googleClientId) return;
+    const init = () => {
+      if (!window.google?.accounts?.id) return false;
+      google.accounts.id.initialize({client_id: config.googleClientId, callback: async response => {
+        try {
+          const data = await api('/api/auth/google', {method:'POST', body:JSON.stringify({credential:response.credential})});
+          token=data.token; me=data.user; localStorage.setItem('splash_token', token); enterApp();
+        } catch(err) { $('#authError').textContent=err.message; }
+      }});
+      google.accounts.id.renderButton($('#googleButton'), {theme:'filled_black', size:'large', text:'continue_with', shape:'pill'});
+      $('#googleSignIn').classList.remove('hidden');
+      return true;
+    };
+    if (!init()) { const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]'); script?.addEventListener('load', init); }
+  } catch { /* email login remains available */ }
+}
+setupGoogleSignIn();
 $('#tabLogin').onclick = ()=>setAuthMode(true);
 $('#tabRegister').onclick = ()=>setAuthMode(false);
 
@@ -67,7 +87,7 @@ $('#registerForm').onsubmit = async e=>{
   e.preventDefault();
   try{
     const data = await api('/api/auth/register', {method:'POST', body:JSON.stringify({
-      username: $('#regUser').value.trim(), password: $('#regPass').value,
+      email: $('#regEmail').value.trim(), username: $('#regUser').value.trim(), password: $('#regPass').value,
       displayName: $('#regName').value.trim(), avatar: selectedAvatar, color: selectedColor })});
     token = data.token; me = data.user; localStorage.setItem('splash_token', token);
     toast('Welcome to Splash! 💧'); enterApp();
