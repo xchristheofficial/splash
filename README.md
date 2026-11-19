@@ -20,23 +20,9 @@ npm install
 npm start        # http://localhost:3000
 ```
 
-## Demo accounts
-
-All demo accounts use password `demo123`:
-
-| Username | Name |
-|---|---|
-| `amara` | Emily Parker |
-| `kofi` | James Miller |
-| `zuri` | Olivia Bennett |
-| `dante` | Daniel Cooper |
-| `splash` | Splash Official |
-
-Or click **"Try the demo"** on the login screen, or sign up with your own username.
-
 ## Tech
 
-Node.js + Express + Socket.IO. Data is stored in `data/db.json` (auto-seeded on first run). Passwords are hashed with scrypt; sessions use random tokens.
+Node.js + Express + Socket.IO. Data is stored in `data/db.json` (starts empty on first run). Passwords are hashed with scrypt; sessions use random tokens.
 
 
 ## Google sign-in on Render
@@ -47,4 +33,6 @@ Node.js + Express + Socket.IO. Data is stored in `data/db.json` (auto-seeded on 
 
 ## Important before a public launch
 
-This is a prototype, not production-ready. The demo accounts have publicly known passwords, email addresses are not verified, and there is no password reset, rate limiting, moderation, or durable production database. Render's free instance storage is ephemeral: account and post data can disappear on restart or redeploy. Use a persistent database and address these security and operational gaps before inviting real users. For a Render persistent disk, set `DATA_DIR` to its mount path (such as `/var/data`); persistent disks require an eligible paid service.
+This is a prototype, not production-ready. Email addresses are not verified, and there is no password reset, rate limiting, moderation, or durable production database. Render's free instance storage is ephemeral: account and post data can disappear on restart or redeploy. Use a persistent database and address these security and operational gaps before inviting real users. For a Render persistent disk, set `DATA_DIR` to its mount path (such as `/var/data`); persistent disks require an eligible paid service.
+
+Existing databases automatically remove the five original demo accounts and their posts, messages, direct-message conversations, follows, sessions, and related activity at startup. Real accounts and their unrelated content are preserved. Back up persistent data before deploying.
