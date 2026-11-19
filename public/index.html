@@ -11,36 +11,45 @@
 
 <!-- ============ AUTH ============ -->
 <div id="authScreen" class="auth-screen">
-  <div class="auth-card">
-    <img class="logo-big splash-logo" src="/icons/splash.svg" alt="">
-    <h1 class="logo-text">Splash</h1>
-    <p class="tagline">Chat with friends. Post your moments.<br>Make waves. 🌊</p>
-    <div class="auth-tabs">
-      <button id="tabLogin" class="auth-tab active">Log in</button>
-      <button id="tabRegister" class="auth-tab">Sign up</button>
-    </div>
-    <form id="loginForm" class="auth-form">
-      <input id="loginUser" placeholder="Email or username" autocomplete="username" required>
-      <input id="loginPass" type="password" placeholder="Password" autocomplete="current-password" required>
-      <button class="btn-primary" type="submit">Log in</button>
-    </form>
-    <form id="registerForm" class="auth-form hidden">
-      <input id="regName" placeholder="Display name (e.g. Emily)" maxlength="40" required>
-      <input id="regEmail" type="email" placeholder="Email address" autocomplete="email" maxlength="254" required>
-      <input id="regUser" placeholder="Username (letters, numbers, _)" autocomplete="username" required>
-      <input id="regPass" type="password" placeholder="Password (min 8 chars)" autocomplete="new-password" minlength="8" required>
-      <div class="picker-row">
-        <span>Avatar:</span>
-        <div id="avatarPicker" class="emoji-picker"></div>
+  <div class="auth-shell">
+    <section class="auth-intro" aria-label="Welcome to Splash">
+      <div class="auth-brand"><img class="splash-logo" src="/icons/splash.svg" alt=""><span>Splash<span class="brand-dot">.</span></span></div>
+      <div class="intro-content">
+        <span class="intro-eyebrow"><span></span> YOUR SPACE TO CONNECT</span>
+        <h1>Good conversations<br>start <em>here.</em></h1>
+        <p>A little corner of the internet for sharing what matters and staying close to your people.</p>
+        <div class="intro-features"><span>✦ Share your moments</span><span>✦ Chat in real time</span><span>✦ Find your people</span></div>
       </div>
-      <div class="picker-row">
-        <span>Color:</span>
-        <div id="colorPicker" class="color-picker"></div>
+      <div class="intro-footer">A little more connection, every day. <span>© Splash</span></div>
+    </section>
+    <main class="auth-card">
+      <div class="auth-heading"><span class="auth-kicker">WELCOME TO SPLASH</span><h2 id="authTitle">Welcome back</h2><p id="authSubtitle">Log in and pick up where you left off.</p></div>
+      <div class="auth-tabs" aria-label="Account options">
+        <button id="tabLogin" type="button" class="auth-tab active" aria-pressed="true">Log in</button>
+        <button id="tabRegister" type="button" class="auth-tab" aria-pressed="false">Sign up</button>
       </div>
-      <button class="btn-primary" type="submit">Create account</button>
-    </form>
-    <div id="googleSignIn" class="google-signin hidden"><div class="auth-divider">or</div><div id="googleButton"></div></div>
-    <p id="authError" class="error"></p>
+      <form id="loginForm" class="auth-form">
+        <label for="loginUser">Email or username</label>
+        <input id="loginUser" placeholder="you@example.com" autocomplete="username" required>
+        <label for="loginPass">Password</label>
+        <input id="loginPass" type="password" placeholder="Enter your password" autocomplete="current-password" required>
+        <button class="btn-primary auth-submit" type="submit">Log in <span aria-hidden="true">→</span></button>
+      </form>
+      <form id="registerForm" class="auth-form hidden">
+        <label for="regName">Display name</label>
+        <input id="regName" placeholder="What should we call you?" autocomplete="name" maxlength="40" required>
+        <label for="regEmail">Email address</label>
+        <input id="regEmail" type="email" placeholder="you@example.com" autocomplete="email" maxlength="254" required>
+        <label for="regUser">Username</label>
+        <input id="regUser" placeholder="Letters, numbers and underscores" autocomplete="username" required>
+        <label for="regPass">Password</label>
+        <input id="regPass" type="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required>
+        <button class="btn-primary auth-submit" type="submit">Create account <span aria-hidden="true">→</span></button>
+      </form>
+      <div id="googleSignIn" class="google-signin hidden"><div class="auth-divider"><span>or continue with</span></div><div id="googleButton"></div></div>
+      <p id="authError" class="error" role="alert" aria-live="polite"></p>
+      <p class="auth-note">Made for real moments and meaningful connections.</p>
+    </main>
   </div>
 </div>
 

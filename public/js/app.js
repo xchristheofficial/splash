@@ -8,7 +8,7 @@ const MOODS = ['💧','🎉','🌅','🎧','📚','⚽','🔥','❤️','😂','
 
 let me = null, token = localStorage.getItem('splash_token') || null;
 let posts = [], users = [], chats = [], messages = [], notifications = [];
-let activeRoom = 'global', activeView = 'feed', selectedMood = '💧', selectedAvatar = '😎', selectedColor = '#06b6d4';
+let activeRoom = 'global', activeView = 'feed', selectedMood = '💧';
 let onlineSet = new Set(), unreadChat = 0, searchQ = '', profileUser = null;
 let socket = null, typingTimer = null;
 
@@ -38,6 +38,10 @@ function setAuthMode(login){
   $('#tabRegister').classList.toggle('active', !login);
   $('#loginForm').classList.toggle('hidden', !login);
   $('#registerForm').classList.toggle('hidden', login);
+  $('#authTitle').textContent = login ? 'Welcome back' : 'Join the conversation';
+  $('#authSubtitle').textContent = login ? 'Log in and pick up where you left off.' : 'Create an account and make yourself at home.';
+  $('#tabLogin').setAttribute('aria-pressed', String(login));
+  $('#tabRegister').setAttribute('aria-pressed', String(!login));
   $('#authError').textContent='';
 }
 async function setupGoogleSignIn(){
@@ -64,10 +68,6 @@ $('#tabLogin').onclick = ()=>setAuthMode(true);
 $('#tabRegister').onclick = ()=>setAuthMode(false);
 
 function buildPickers(){
-  $('#avatarPicker').innerHTML = AVATARS.map(a=>`<button type="button" data-a="${a}" class="${a===selectedAvatar?'sel':''}">${a}</button>`).join('');
-  $('#avatarPicker').onclick = e=>{ const b=e.target.closest('button'); if(!b)return; selectedAvatar=b.dataset.a; $$('#avatarPicker button').forEach(x=>x.classList.toggle('sel',x===b)); };
-  $('#colorPicker').innerHTML = COLORS.map(c=>`<button type="button" data-c="${c}" style="background:${c}" class="${c===selectedColor?'sel':''}"></button>`).join('');
-  $('#colorPicker').onclick = e=>{ const b=e.target.closest('button'); if(!b)return; selectedColor=b.dataset.c; $$('#colorPicker button').forEach(x=>x.classList.toggle('sel',x===b)); };
   $('#moodPicker').innerHTML = MOODS.map(m=>`<button type="button" data-m="${m}" class="${m===selectedMood?'sel':''}">${m}</button>`).join('');
   $('#moodPicker').onclick = e=>{ const b=e.target.closest('button'); if(!b)return; selectedMood=b.dataset.m; $$('#moodPicker button').forEach(x=>x.classList.toggle('sel',x===b)); };
 }
@@ -88,7 +88,7 @@ $('#registerForm').onsubmit = async e=>{
   try{
     const data = await api('/api/auth/register', {method:'POST', body:JSON.stringify({
       email: $('#regEmail').value.trim(), username: $('#regUser').value.trim(), password: $('#regPass').value,
-      displayName: $('#regName').value.trim(), avatar: selectedAvatar, color: selectedColor })});
+      displayName: $('#regName').value.trim() })});
     token = data.token; me = data.user; localStorage.setItem('splash_token', token);
     toast('Welcome to Splash! 💧'); enterApp();
   }catch(err){ $('#authError').textContent = err.message; }
