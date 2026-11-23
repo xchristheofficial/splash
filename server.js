@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { Client } = require('pg');
 const { OAuth2Client } = require('google-auth-library');
 const googleClient = new OAuth2Client();
 
@@ -37,16 +38,45 @@ function verifyPw(pw, stored) {
 function uid(p) { return p + crypto.randomBytes(6).toString('hex'); }
 
 let db;
-if (fs.existsSync(DB_PATH)) {
-  // Never overwrite an unreadable database with an empty one.
-  db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-} else {
-  db = seed();
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+let pgClient;
+let pendingSave = Promise.resolve();
+let storageError = null;
+
+async function initializeStorage() {
+  if (process.env.DATABASE_URL) {
+    pgClient = new Client({ connectionString: process.env.DATABASE_URL });
+    await pgClient.connect();
+    // This application holds one in-memory snapshot; prohibit multiple writers.
+    const lock = await pgClient.query("SELECT pg_try_advisory_lock(1936744552) AS acquired");
+    if (!lock.rows[0].acquired) throw new Error('Another Splash instance is already using this database');
+    pgClient.on('error', err => { console.error('Database connection lost:', err.message); storageError = err; });
+    await pgClient.query('CREATE TABLE IF NOT EXISTS splash_state (id integer PRIMARY KEY CHECK (id = 1), data jsonb NOT NULL)');
+    const result = await pgClient.query('SELECT data FROM splash_state WHERE id = 1');
+    if (result.rows.length) db = result.rows[0].data;
+    else {
+      // Import only when explicitly requested; never replace an existing database.
+      if (process.env.IMPORT_LOCAL_DATA === 'true') {
+        if (!fs.existsSync(DB_PATH)) throw new Error('IMPORT_LOCAL_DATA is set but the local data file does not exist');
+        db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+      } else db = seed();
+      await pgClient.query('INSERT INTO splash_state (id, data) VALUES (1, $1::jsonb)', [JSON.stringify(db)]);
+    }
+  } else {
+    if (process.env.RENDER && !process.env.DATA_DIR) throw new Error('Set DATABASE_URL or DATA_DIR to persistent storage before deploying on Render');
+    if (fs.existsSync(DB_PATH)) db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    else {
+      db = seed();
+      fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+      fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+    }
+  }
+  removeDemoAccounts();
+  await pendingSave;
 }
+
 // Remove only the original seeded accounts, identified by their fixed ID and username.
 // Registered accounts receive random IDs, so even a matching username is preserved.
+function removeDemoAccounts() {
 const demoIds = new Map([['u1', 'splash'], ['u2', 'amara'], ['u3', 'kofi'], ['u4', 'zuri'], ['u5', 'dante']]);
 const removed = new Set(db.users.filter(u => demoIds.get(u.id) === u.username).map(u => u.id));
 if (removed.size) {
@@ -62,13 +92,40 @@ if (removed.size) {
   db.follows = db.follows.filter(f => !removed.has(f.followerId) && !removed.has(f.followingId));
   db.notifications = db.notifications.filter(n => !removed.has(n.userId) && !removed.has(n.refId) && !removedPosts.has(n.refId) && !removedRooms.has(n.refId));
   for (const [token, id] of Object.entries(db.tokens)) if (removed.has(id)) delete db.tokens[token];
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+  save();
 }
-let saveTimer;
+}
+// Queue complete snapshots in order. A response is not acknowledged until its write finishes.
 function save() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2)), 100);
+  const snapshot = JSON.stringify(db);
+  pendingSave = pendingSave.then(async () => {
+    if (storageError) throw storageError;
+    if (pgClient) await pgClient.query('UPDATE splash_state SET data = $1::jsonb WHERE id = 1', [snapshot]);
+    else {
+      const tmp = DB_PATH + '.tmp';
+      fs.writeFileSync(tmp, snapshot);
+      fs.renameSync(tmp, DB_PATH);
+    }
+  });
+  pendingSave.catch(err => { storageError = err; console.error('Failed to save Splash data:', err.message); });
 }
+app.use('/api', (req, res, next) => {
+  if (storageError) return res.status(503).json({ error: 'Storage unavailable; please try again later' });
+  const end = res.end;
+  res.end = function (chunk, encoding, callback) {
+    const response = this;
+    pendingSave.then(() => end.call(response, chunk, encoding, callback), () => {
+      if (!response.headersSent) {
+        response.statusCode = 503;
+        response.removeHeader('Content-Length');
+        response.setHeader('Content-Type', 'application/json');
+        end.call(response, JSON.stringify({ error: 'Unable to save data; please try again later' }));
+      } else end.call(response);
+    });
+    return response;
+  };
+  next();
+});
 function publicUser(u) {
   if (!u) return null;
   return { id: u.id, username: u.username, displayName: u.displayName, avatar: u.avatar, color: u.color, bio: u.bio || '', createdAt: u.createdAt, lastSeen: u.lastSeen };
@@ -85,7 +142,6 @@ function auth(req, res, next) {
 function notify(userId, type, text, refId) {
   if (!userId || userId === arguments[4]) {}
   db.notifications.unshift({ id: uid('n'), userId, type, text, refId: refId || null, read: false, createdAt: Date.now() });
-  db.notifications = db.notifications.slice(0, 200);
   io.to('user:' + userId).emit('notification:new', db.notifications.find(n => n.userId === userId));
   save();
 }
@@ -345,4 +401,6 @@ app.get('/api/health', (req, res) => res.json({ ok: true, app: 'Splash', users: 
 
 app.use((req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-server.listen(PORT, '0.0.0.0', () => console.log(`💧 Splash running on http://0.0.0.0:${PORT}`));
+initializeStorage().then(() => {
+  server.listen(PORT, '0.0.0.0', () => console.log(`💧 Splash running on http://0.0.0.0:${PORT}`));
+}).catch(err => { console.error('Unable to initialize persistent storage:', err.message); process.exit(1); });
